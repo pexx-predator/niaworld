@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -25,6 +26,32 @@ const navigation = [
 
 type NoticeType = "success" | "error" | "info";
 type PayoutMethodType = "mpesa" | "bank" | "paypal";
+
+type ApiResponse = {
+  error?: string;
+  success?: boolean;
+  payouts?: unknown;
+  commission_rate?: unknown;
+  payout_methods?: unknown;
+  payout_method?: {
+    id?: string;
+  };
+  payout_id?: string;
+};
+
+async function readApiResponse(response: Response): Promise<ApiResponse> {
+  const parsed: unknown = await response.json().catch(() => null);
+
+  if (
+    parsed !== null &&
+    typeof parsed === "object" &&
+    !Array.isArray(parsed)
+  ) {
+    return parsed as ApiResponse;
+  }
+
+  return {};
+}
 
 type WalletLedgerEntry = {
   id: string;
@@ -380,19 +407,18 @@ export default function ProviderEarningsPage() {
       if (ledgerResult.error) throw ledgerResult.error;
       if (paymentResult.error) throw paymentResult.error;
 
-      const payoutData = await payoutResponse.json().catch(() => null);
-      const methodData = await methodResponse.json().catch(() => null);
+      const payoutData = await readApiResponse(payoutResponse);
+      const methodData = await readApiResponse(methodResponse);
 
       if (!payoutResponse.ok) {
-        throw new Error(payoutData?.error ?? "Unable to retrieve payout history.");
+        throw new Error(payoutData.error ?? "Unable to retrieve payout history.");
       }
 
       if (!methodResponse.ok) {
-        throw new Error(methodData?.error ?? "Unable to retrieve payout methods.");
+        throw new Error(methodData.error ?? "Unable to retrieve payout methods.");
       }
 
       if (
-        !payoutData ||
         !Array.isArray(payoutData.payouts) ||
         typeof payoutData.commission_rate !== "number" ||
         !Number.isFinite(payoutData.commission_rate) ||
@@ -402,7 +428,7 @@ export default function ProviderEarningsPage() {
         throw new Error("The payout API returned invalid wallet data.");
       }
 
-      if (!methodData || !Array.isArray(methodData.payout_methods)) {
+      if (!Array.isArray(methodData.payout_methods)) {
         throw new Error("The payout methods API returned invalid data.");
       }
 
@@ -491,13 +517,13 @@ export default function ProviderEarningsPage() {
         }),
       });
 
-      const result = await response.json().catch(() => null);
+      const result = await readApiResponse(response);
 
       if (!response.ok) {
-        throw new Error(result?.error ?? "Unable to register this payout method.");
+        throw new Error(result.error ?? "Unable to register this payout method.");
       }
 
-      if (!result?.success || !result?.payout_method?.id) {
+      if (!result.success || !result.payout_method?.id) {
         throw new Error("The server did not confirm payout method registration.");
       }
 
@@ -608,13 +634,13 @@ export default function ProviderEarningsPage() {
         }),
       });
 
-      const result = await response.json().catch(() => null);
+      const result = await readApiResponse(response);
 
       if (!response.ok) {
-        throw new Error(result?.error ?? "Unable to submit your withdrawal request.");
+        throw new Error(result.error ?? "Unable to submit your withdrawal request.");
       }
 
-      if (!result?.success || !result?.payout_id) {
+      if (!result.success || !result.payout_id) {
         throw new Error("The payout request did not return a confirmation reference.");
       }
 

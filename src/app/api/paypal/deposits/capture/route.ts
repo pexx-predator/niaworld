@@ -46,8 +46,18 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json().catch(() => null);
-    const orderId = body?.orderId;
+    const parsedBody: unknown = await request
+      .json()
+      .catch(() => null);
+
+    const body =
+      parsedBody !== null &&
+      typeof parsedBody === "object" &&
+      !Array.isArray(parsedBody)
+        ? (parsedBody as Record<string, unknown>)
+        : {};
+
+    const orderId = body.orderId;
 
     if (
       typeof orderId !== "string" ||
@@ -61,17 +71,19 @@ export async function POST(request: Request) {
 
     const admin = createAdminClient();
 
-    const { data: transaction, error: transactionError } =
-      await admin
-        .from("wallet_transactions")
-        .select(
-          "id, wallet_id, amount, currency, status, metadata, provider_reference",
-        )
-        .eq("provider_reference", orderId)
-        .eq("payment_provider", "paypal")
-        .eq("type", "deposit")
-        .eq("direction", "credit")
-        .maybeSingle();
+    const {
+      data: transaction,
+      error: transactionError,
+    } = await admin
+      .from("wallet_transactions")
+      .select(
+        "id, wallet_id, amount, currency, status, metadata, provider_reference",
+      )
+      .eq("provider_reference", orderId)
+      .eq("payment_provider", "paypal")
+      .eq("type", "deposit")
+      .eq("direction", "credit")
+      .maybeSingle();
 
     if (transactionError) {
       console.error("PayPal deposit lookup failed:", {
@@ -92,7 +104,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data: wallet, error: walletError } = await admin
+    const {
+      data: wallet,
+      error: walletError,
+    } = await admin
       .from("wallet_accounts")
       .select("user_id, currency")
       .eq("id", transaction.wallet_id)
@@ -136,10 +151,13 @@ export async function POST(request: Request) {
       typeof expectedDepositId !== "string" ||
       !expectedDepositId.trim()
     ) {
-      console.error("Missing PayPal deposit ID in transaction metadata:", {
-        transactionId: transaction.id,
-        orderId,
-      });
+      console.error(
+        "Missing PayPal deposit ID in transaction metadata:",
+        {
+          transactionId: transaction.id,
+          orderId,
+        },
+      );
 
       return NextResponse.json(
         { error: "The deposit reference could not be verified." },
@@ -164,7 +182,9 @@ export async function POST(request: Request) {
       );
     } catch (error) {
       captureRequestError =
-        error instanceof Error ? error.message : "Unknown capture error";
+        error instanceof Error
+          ? error.message
+          : "Unknown capture error";
 
       console.warn(
         "PayPal capture request did not return normally. Retrieving order.",
@@ -350,7 +370,9 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("PayPal capture failed:", {
       message:
-        error instanceof Error ? error.message : "Unknown error",
+        error instanceof Error
+          ? error.message
+          : "Unknown error",
     });
 
     return NextResponse.json(

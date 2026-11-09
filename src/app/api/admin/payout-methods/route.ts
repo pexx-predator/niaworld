@@ -28,8 +28,6 @@ async function getActiveAdmin() {
     .maybeSingle();
 
   if (adminError) {
-    console.error("Admin authorization failed:", adminError);
-
     return {
       response: NextResponse.json(
         { error: "Unable to verify admin access." },
@@ -69,7 +67,7 @@ export async function GET() {
       .order("created_at", { ascending: true });
 
     if (error) {
-      console.error("Pending payout methods query failed:", error);
+      console.error("Admin payout methods query failed:", error);
 
       return NextResponse.json(
         { error: "Unable to load pending payout methods." },
@@ -88,11 +86,10 @@ export async function GET() {
     }[] = [];
 
     if (providerIds.length > 0) {
-      const { data: profileData, error: profileError } =
-        await adminClient
-          .from("profiles")
-          .select("user_id, display_name, username")
-          .in("user_id", providerIds);
+      const { data: profileData, error: profileError } = await adminClient
+        .from("profiles")
+        .select("user_id, display_name, username")
+        .in("user_id", providerIds);
 
       if (profileError) {
         console.error("Provider profiles query failed:", profileError);
@@ -141,16 +138,19 @@ export async function POST(request: NextRequest) {
       return adminAuth.response;
     }
 
-    const body = await request.json();
+    const parsedBody: unknown = await request.json().catch(() => null);
 
-    const id =
-      typeof body.id === "string" ? body.id.trim() : "";
+    const body =
+      parsedBody !== null &&
+      typeof parsedBody === "object" &&
+      !Array.isArray(parsedBody)
+        ? (parsedBody as Record<string, unknown>)
+        : {};
 
+    const id = typeof body.id === "string" ? body.id.trim() : "";
     const action =
       typeof body.action === "string" ? body.action.trim() : "";
-
-    const note =
-      typeof body.note === "string" ? body.note.trim() : "";
+    const note = typeof body.note === "string" ? body.note.trim() : "";
 
     const uuidPattern =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

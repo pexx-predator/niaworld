@@ -4,6 +4,24 @@
 import { useState } from "react";
 import Link from "next/link";
 
+type DepositResponse = {
+  status?: string;
+  error?: string;
+  approvalUrl?: string;
+};
+
+async function readDepositResponse(
+  response: Response
+): Promise<DepositResponse> {
+  const data: unknown = await response.json().catch(() => null);
+
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    return data as DepositResponse;
+  }
+
+  return {};
+}
+
 export default function PayPalDepositPage() {
   const [amount, setAmount] = useState("10.00");
   const [loading, setLoading] = useState(false);
@@ -23,7 +41,9 @@ export default function PayPalDepositPage() {
       value < 1 ||
       value > 1000
     ) {
-      setError("Enter a valid amount between $1.00 and $1,000.00, using up to two decimal places.");
+      setError(
+        "Enter a valid amount between $1.00 and $1,000.00, using up to two decimal places."
+      );
       return;
     }
 
@@ -36,7 +56,7 @@ export default function PayPalDepositPage() {
         body: JSON.stringify({ amount: value.toFixed(2) }),
       });
 
-      const result = await response.json();
+      const result = await readDepositResponse(response);
 
       if (result.status === "PENDING_REVIEW") {
         setPendingReview(true);
@@ -133,6 +153,7 @@ export default function PayPalDepositPage() {
                     ? "Payment awaiting confirmation"
                     : "Deposit could not be started"}
                 </p>
+
                 <p className="mt-1">{error}</p>
 
                 {pendingReview && (

@@ -20,6 +20,22 @@ type PayoutMethod = {
   } | null;
 };
 
+type ApiResponse = {
+  error?: string;
+  message?: string;
+  methods?: PayoutMethod[];
+};
+
+async function readApiResponse(response: Response): Promise<ApiResponse> {
+  const data: unknown = await response.json().catch(() => null);
+
+  if (data === null || typeof data !== "object" || Array.isArray(data)) {
+    return {};
+  }
+
+  return data as ApiResponse;
+}
+
 export default function PayoutMethodVerification() {
   const [methods, setMethods] = useState<PayoutMethod[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,13 +54,13 @@ export default function PayoutMethodVerification() {
         cache: "no-store",
       });
 
-      const result = await response.json();
+      const result = await readApiResponse(response);
 
       if (!response.ok) {
         throw new Error(result.error || "Unable to load payout methods.");
       }
 
-      setMethods(result.methods ?? []);
+      setMethods(Array.isArray(result.methods) ? result.methods : []);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Something went wrong.",
@@ -76,7 +92,7 @@ export default function PayoutMethodVerification() {
         body: JSON.stringify({ id, action, note }),
       });
 
-      const result = await response.json();
+      const result = await readApiResponse(response);
 
       if (!response.ok) {
         throw new Error(result.error || "Unable to review payout method.");
@@ -300,10 +316,7 @@ export default function PayoutMethodVerification() {
 
                     <button
                       type="button"
-                      disabled={
-                        !rejectionNote.trim() ||
-                        processingId !== null
-                      }
+                      disabled={!rejectionNote.trim() || processingId !== null}
                       onClick={() =>
                         void reviewMethod(
                           method.id,

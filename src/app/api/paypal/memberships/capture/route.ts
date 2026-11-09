@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { paypalRequest } from "@/lib/paypal/server";
 
-
 type PayPalCapture = {
   id?: string;
   status?: string;
@@ -57,8 +56,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json().catch(() => null);
-    const orderId = body?.orderId;
+    const parsedBody: unknown = await request.json().catch(() => null);
+
+    const body =
+      parsedBody !== null &&
+      typeof parsedBody === "object" &&
+      !Array.isArray(parsedBody)
+        ? (parsedBody as Record<string, unknown>)
+        : {};
+
+    const orderId = body.orderId;
 
     if (
       typeof orderId !== "string" ||
@@ -126,15 +133,13 @@ export async function POST(request: Request) {
           code: summaryError.code,
         });
 
-        return NextResponse.json(
-          {
-            success: true,
-            alreadyProcessed: true,
-            membershipId: payment.membership_id,
-            message:
-              "Your payment was already processed. Refresh to view your membership.",
-          },
-        );
+        return NextResponse.json({
+          success: true,
+          alreadyProcessed: true,
+          membershipId: payment.membership_id,
+          message:
+            "Your payment was already processed. Refresh to view your membership.",
+        });
       }
 
       return NextResponse.json({

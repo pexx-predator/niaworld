@@ -145,8 +145,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json().catch(() => null);
-    const slug = body?.planSlug;
+    const parsedBody: unknown = await request.json().catch(() => null);
+
+    const body =
+      parsedBody !== null &&
+      typeof parsedBody === "object" &&
+      !Array.isArray(parsedBody)
+        ? (parsedBody as Record<string, unknown>)
+        : {};
+
+    const slug = body.planSlug;
 
     if (
       typeof slug !== "string" ||
@@ -203,7 +211,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const amountCents = Math.round(Number(checkout.amount) * 100);
+    const amountCents = Math.round(
+      Number(checkout.amount) * 100,
+    );
 
     if (!Number.isSafeInteger(amountCents) || amountCents <= 0) {
       return NextResponse.json(
@@ -219,7 +229,10 @@ export async function POST(request: Request) {
 
     // Confirm that the pending payment belongs to this user
     // and matches the membership returned by the database RPC.
-    const { data: payment, error: paymentError } = await admin
+    const {
+      data: payment,
+      error: paymentError,
+    } = await admin
       .from("membership_payments")
       .select(
         "id, membership_id, amount, currency, status, payment_provider, payment_reference",

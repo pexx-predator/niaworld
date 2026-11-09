@@ -722,6 +722,14 @@ export default function Home() {
           <p>Real People. Real Cultures. Real Connections.</p>
           <a className="footer-back-top" href="#home">Back to top ↑</a>
         </div>
+        <div className="footer-legal-links flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-white/15 py-5 text-xs text-white/75">
+          <a className="transition hover:text-white" href="/legal/terms-of-service">Terms of Service</a>
+          <a className="transition hover:text-white" href="/legal/privacy-policy">Privacy Policy</a>
+          <a className="transition hover:text-white" href="/legal/cookie-policy">Cookie Policy</a>
+          <a className="transition hover:text-white" href="/legal/refund-cancellation">Refunds &amp; Cancellations</a>
+          <a className="transition hover:text-white" href="/legal/provider-agreement">Provider Agreement</a>
+          <a className="transition hover:text-white" href="/legal/community-guidelines">Community Guidelines</a>
+        </div>
         <div className="footer-bottom">
           <span>© 2026 NiaWorld</span>
           <span>Built around curiosity, culture, and connection.</span>

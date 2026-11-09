@@ -138,16 +138,19 @@ export async function POST(request: NextRequest) {
       return adminAuth.response;
     }
 
-    const body = await request.json();
+    const parsedBody: unknown = await request.json().catch(() => null);
 
-    const id =
-      typeof body.id === "string" ? body.id.trim() : "";
+    const body =
+      parsedBody !== null &&
+      typeof parsedBody === "object" &&
+      !Array.isArray(parsedBody)
+        ? (parsedBody as Record<string, unknown>)
+        : {};
 
+    const id = typeof body.id === "string" ? body.id.trim() : "";
     const action =
       typeof body.action === "string" ? body.action.trim() : "";
-
-    const note =
-      typeof body.note === "string" ? body.note.trim() : "";
+    const note = typeof body.note === "string" ? body.note.trim() : "";
 
     const uuidPattern =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

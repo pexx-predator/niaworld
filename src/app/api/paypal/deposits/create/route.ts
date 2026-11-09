@@ -107,8 +107,18 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json().catch(() => null);
-    const rawAmount = body?.amount;
+    const parsedBody: unknown = await request
+      .json()
+      .catch(() => null);
+
+    const body =
+      parsedBody !== null &&
+      typeof parsedBody === "object" &&
+      !Array.isArray(parsedBody)
+        ? (parsedBody as Record<string, unknown>)
+        : {};
+
+    const rawAmount = body.amount;
 
     if (
       (typeof rawAmount !== "string" &&
@@ -265,7 +275,8 @@ export async function POST(request: Request) {
       }
 
       const metadata =
-        (transaction.metadata as Record<string, unknown> | null) ?? {};
+        (transaction.metadata as Record<string, unknown> | null) ??
+        {};
 
       if (metadata.paypal_deposit_id !== deposit.deposit_id) {
         return NextResponse.json(
@@ -479,23 +490,25 @@ export async function POST(request: Request) {
       }
 
       // Link PayPal's order to the pending NiaWorld deposit.
-      const { data: linkedTransaction, error: updateError } =
-        await admin
-          .from("wallet_transactions")
-          .update({
-            provider_reference: order.id,
-            metadata: {
-              ...metadata,
-              paypal_deposit_id: deposit.deposit_id,
-              paypal_order_id: order.id,
-              paypal_order_status: order.status,
-            },
-          })
-          .eq("id", transaction.id)
-          .eq("status", "pending")
-          .is("provider_reference", null)
-          .select("id")
-          .maybeSingle();
+      const {
+        data: linkedTransaction,
+        error: updateError,
+      } = await admin
+        .from("wallet_transactions")
+        .update({
+          provider_reference: order.id,
+          metadata: {
+            ...metadata,
+            paypal_deposit_id: deposit.deposit_id,
+            paypal_order_id: order.id,
+            paypal_order_status: order.status,
+          },
+        })
+        .eq("id", transaction.id)
+        .eq("status", "pending")
+        .is("provider_reference", null)
+        .select("id")
+        .maybeSingle();
 
       if (updateError || !linkedTransaction) {
         console.error("Unable to link PayPal order to deposit:", {
